@@ -93,7 +93,6 @@
 					var success = false;
 					for (var i=0; i < validSigs1.length; i++) {
 						var curr = validSigs1[i];
-						console.log(curr + " , " + sig);
 						if (curr == sig) {
 							fileStruct.header.sig = sig;
 							success = true;
@@ -166,7 +165,6 @@
 						);
 					}
 					fileStruct.ptr += 3;
-					console.log(out);
 					return out;
 				}
 				return fileStruct;

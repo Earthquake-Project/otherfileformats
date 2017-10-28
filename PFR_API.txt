@@ -1,0 +1,5 @@
+// todo : vast improvements!!!
+PFR API USAGE:
+
+PFR("URL",<some url here>);
+returns an initialized PFR object
