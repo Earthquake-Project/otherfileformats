@@ -1,0 +1,188 @@
+<!doctype HTML>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>Earthquake PFR Parser</title>
+	</head>
+	<body>
+		<h1 id="out">PARSING PFR!!!</h1>
+		<script type="text/javascript">
+			function PFR(method,source) {
+				var levels = {
+					INIT : 0,
+					HEADER_PARSED : 1,
+
+				};
+				var levelsErr = {
+					SUCCESS : 0,
+					HEADER_INVALID : 1,
+
+				};
+				var fileStruct = {};
+				var m2 = method.toUpperCase();
+				switch (m2) {
+					case "URL" : 
+						var XHR = new XMLHttpRequest();
+						XHR.responseType = "arraybuffer";
+						XHR.onreadystatechange = function() {
+							if (XHR.readyState == 4 && XHR.status == 200) {
+								fileStruct.rawBytes = new DataView(XHR.response);
+								fileStruct.ptr = 0;
+								fileStruct.logFontDir = [];
+								fileStruct.logFontDSec = [];
+								fileStruct.physFontSec = [];
+								fileStruct.glyphStr = [];
+								fileStruct.header = {
+									sig : "",
+									size : 0,
+									sig2 : "",
+									headerSize : 0,
+									logFontDirSize : 0,
+									logFontDirOffset : 0,
+									logFontDirSize : 0,
+									logFontDirOffset : 0,
+									logFontMaxSize : 0,
+									logFontSectionSize : 0,
+									logFontSectionOffset : 0,
+									physFontMaxSize : 0,
+									physFontSectionSize : 0,
+									physFontSectionOffset : 0,
+									gpsMaxSize : 0,
+									gpsSectionSize : 0,
+									gpsSectionOffset : 0,
+									maxBlueValues : 0,
+									maxXorus : 0,
+									maxYorus : 0,
+									physFontMaxSizeHighByte : 0,
+									zeros : [0,0,0,0,0,0],
+									pfrInvertBitmap : false,
+									pfrBlackPixel : false,
+									bctMaxSize : 0,
+									bctSetMaxSize : 0,
+									pftBctSetMaxSize : 0,
+									nPhysFonts : 0,
+									maxStemSnapVsize : 0,
+									maxStemSnapHsize : 0,
+									maxChars : 0
+								};
+								fileStruct.trailer = {
+									size : 0,
+									sig : ""
+								};
+								fileStruct.level = 0;
+								fileStruct.errorLevel = 0;
+								fileStruct.errors = [];
+								validateHeader();
+
+							}
+						}
+						XHR.open("GET",source,true);
+						XHR.send();
+						break;
+				}
+				function validateHeader() {
+					fileStruct.ptr = 0;
+					var validSigs1 = [ // header sig
+						"PFR0",
+						"PFR1"
+					];
+					var validSigs2 = [ // trailer sig
+						"$PFR$"
+					];
+					var sig = getString(4);
+					console.log(sig);
+					var success = false;
+					for (var i=0; i < validSigs1.lenth; i++) {
+						var curr = validSigs1[i];
+						if (curr == sig) {
+							fileStruct.header.sig = sig;
+							success = true;
+							break;
+						}
+					}
+					if (!success) {
+						fileStruct.errorLevel = levelsErr.HEADER_INVALID;
+						fileStruct.errors.push(new Error("PFR HEADER SIGNATURE INCORRRECT!"));
+					}
+					fileStruct.ptr = fileStruct.rawBytes.buffer.byteLength - 5;
+					sig = getString(5);
+					success = false;
+					if (sig == validSigs2[0]) {
+						success = true;
+						fileStruct.trailer.sig = sig;
+					}
+					if (!success) {
+						fileStruct.errorLevel = levelsErr.HEADER_INVALID;
+						fileStruct.errors.push(new Error("PFR TRAILER SIGNATURE INCORRRECT"));
+					}
+					fileStruct.ptr = fileStruct.rawBytes.buffer.byteLength - 8;
+					var size = getU24(false);
+					success = false;
+					if (size == fileStruct.rawBytes.buffer.byteLenth) {
+						success = true;
+						fileStruct.trailer.size = size;
+					}
+					if (!success) {
+						fileStruct.errorLevel = levelsErr.HEADER_INVALID;
+						fileStruct.errors.push(new Error("PFR TRAILER SIZE DOES NOT MATCH FILE SIZE!"));
+					}
+				}
+				function getString(len) {
+					var bytes = fileStruct.rawBytes;
+					var out = "";
+					if (len == 0)
+						len = bytes.buffer.byteLength - fileStruct.ptr;
+					for (var i=0; i < len; i++) {
+						var charCode = fileStruct.rawBytes.getUint8(fileStruct.ptr);
+						fileStruct.ptr++;
+						if (charCode > 0)
+							out += String.fromCharCode(charCode);
+						else {
+							break;
+						}
+					}
+					return out;
+				}
+				function getU24(little) {
+					var out = 0;
+					var ptr = fileStruct.ptr;
+					var i = fileStruct.rawBytes.getUint8(ptr);
+					var i2 = fileStruct.rawBytes.getUint8(ptr + 1);
+					var i3 = fileStruct.rawBytes.getUint8(ptr + 2);
+					if (little) {
+						out += (
+							(i3 << 16) +
+							(i2 << 8) +
+							i
+						);
+					} else {
+						out += (
+							(i << 16) +
+							(i2 << 8) +
+							i3
+						);
+					}
+					fileStruct.ptr += 3;
+					return out;
+				}
+				return fileStruct;
+			}
+		</script>
+		<script type="text/javascript">
+			var font = PFR("URL","bitlight_maybe.pfr");
+			var out = document.getElementById("out");
+			var list = document.createElement("ul");
+			out.innerHTML = "";
+			out.appendChild(list);
+			var header = document.createElement("li");
+			var size = document.createElement("li");
+			var trailer = document.createElement("li");
+			list.appendChild(header);
+			list.appendChild(size);
+			list.appendChild(trailer);
+			header.innerHTML = font.header.sig;
+			size.innerHTML = font.trailer.size + " bytes";
+			trailer.innerHTML = font.trailer.sig;
+		</script>
+	</body>
+</html>
