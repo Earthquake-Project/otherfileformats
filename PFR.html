@@ -22,6 +22,9 @@
 				var m2 = method.toUpperCase();
 				switch (m2) {
 					case "URL" : 
+						fileStruct.level = 0;
+						fileStruct.errorLevel = 0;
+						fileStruct.errors = [];
 						var XHR = new XMLHttpRequest();
 						XHR.responseType = "arraybuffer";
 						XHR.onreadystatechange = function() {
@@ -69,9 +72,6 @@
 									size : 0,
 									sig : ""
 								};
-								fileStruct.level = 0;
-								fileStruct.errorLevel = 0;
-								fileStruct.errors = [];
 								validateHeader();
 
 							}
@@ -90,10 +90,10 @@
 						"$PFR$"
 					];
 					var sig = getString(4);
-					console.log(sig);
 					var success = false;
-					for (var i=0; i < validSigs1.lenth; i++) {
+					for (var i=0; i < validSigs1.length; i++) {
 						var curr = validSigs1[i];
+						console.log(curr + " , " + sig);
 						if (curr == sig) {
 							fileStruct.header.sig = sig;
 							success = true;
@@ -118,7 +118,7 @@
 					fileStruct.ptr = fileStruct.rawBytes.buffer.byteLength - 8;
 					var size = getU24(false);
 					success = false;
-					if (size == fileStruct.rawBytes.buffer.byteLenth) {
+					if (size == fileStruct.rawBytes.buffer.byteLength) {
 						success = true;
 						fileStruct.trailer.size = size;
 					}
@@ -126,6 +126,9 @@
 						fileStruct.errorLevel = levelsErr.HEADER_INVALID;
 						fileStruct.errors.push(new Error("PFR TRAILER SIZE DOES NOT MATCH FILE SIZE!"));
 					}
+
+					if (fileStruct.errorLevel == 0)
+						fileStruct.level = levels.HEADER_PARSED;
 				}
 				function getString(len) {
 					var bytes = fileStruct.rawBytes;
@@ -163,6 +166,7 @@
 						);
 					}
 					fileStruct.ptr += 3;
+					console.log(out);
 					return out;
 				}
 				return fileStruct;
@@ -180,9 +184,15 @@
 			list.appendChild(header);
 			list.appendChild(size);
 			list.appendChild(trailer);
-			header.innerHTML = font.header.sig;
-			size.innerHTML = font.trailer.size + " bytes";
-			trailer.innerHTML = font.trailer.sig;
+			
+			var loop = setInterval(function(){
+				if (font.level == 1) {
+					header.innerHTML = font.header.sig;
+					size.innerHTML = font.trailer.size + " bytes";
+					trailer.innerHTML = font.trailer.sig;
+					clearInterval(loop);
+				}
+			},10);
 		</script>
 	</body>
 </html>
