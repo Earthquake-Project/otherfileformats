@@ -5,6 +5,76 @@
 		<title>Earthquake SWF Parser</title>
 	</head>
 	<body>
-		<h1>PARSING SWF!!!</h1>
+		<h1 id="out">PARSING SWF!!!</h1>
+		<script type="text/javascript">
+			function SWF(method,source) {
+				var m2 = method.toUpperCase();
+				var fileStruct = {};
+				switch (m2) {
+					case "URL" : 
+						var XHR = new XMLHttpRequest();
+						XHR.responseType = "arraybuffer";
+						fileStruct.level = 0;
+						fileStruct.errorLevel = 0;
+						fileStruct.errors = [];
+						XHR.onreadystatechange = function() {
+							if (XHR.readyState == 4 && XHR.status == 200) {
+								fileStruct.rawBytes = new DataView(XHR.response);
+								fileStruct.ptr = 0;
+								fileStruct.tags = [];
+								findTags();
+							}
+						}
+						XHR.open("GET",source,true);
+						XHR.send();
+						break;
+				}
+				function findTags() {
+					fileStruct.ptr = 21;
+					while (fileStruct.ptr < fileStruct.rawBytes.buffer.byteLength) {
+						getTagHeader();
+					}
+					fileStruct.level = 1;
+				}
+				function getTagHeader () {
+					var idLength = fileStruct.rawBytes.getUint16(fileStruct.ptr,true);
+					// console.log(idLength);
+					var id = (idLength & 0b1111111111000000) >>> 6;
+					var length = idLength & 0b0000000000111111;
+					var offset = fileStruct.ptr + 2;
+					var offset2 = 2;
+					if (length == 63) {
+						offset += 4;
+						offset2 += 4;
+						length = fileStruct.rawBytes.getUint32(fileStruct.ptr + 2,true);
+					}
+					fileStruct.ptr += (offset2 + length);
+					fileStruct.tags.push({
+						type : id,
+						length : length,
+						dataOffset : offset
+					});
+				}
+				return fileStruct;
+			}
+		</script>
+		<script type="text/javascript">
+			var flash = SWF("URL","opening_anim.swf");
+			var out = document.getElementById("out");
+			var list = document.createElement("ul");
+			out.innerHTML = "SWF TAGS <br/> type | size | data offset";
+			out.appendChild(list);
+			var loop = setInterval(function(){
+				if (flash.level == 1) {
+					for (var i=0; i < flash.tags.length; i++) {
+						var item = document.createElement("li");
+						var curr = flash.tags[i];
+						item.innerHTML = curr.type + " | " + curr.length + " bytes | 0x" + curr.dataOffset.toString(16);
+						list.appendChild(item);
+					}
+					clearInterval(loop);
+				}
+			},10);
+		</script>
 	</body>
 </html>
